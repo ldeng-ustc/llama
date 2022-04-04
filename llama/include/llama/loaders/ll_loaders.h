@@ -39,6 +39,7 @@
 
 #include <vector>
 
+#include "llama/loaders/ll_load_bin.h"
 #include "llama/loaders/ll_load_fgf.h"
 #include "llama/loaders/ll_load_net.h"
 #include "llama/loaders/ll_load_xstream1.h"
@@ -68,6 +69,7 @@ public:
 
 		_loaders.push_back(new ll_generator_erdos_renyi());
 		_loaders.push_back(new ll_generator_rmat());
+		_loaders.push_back(new ll_loader_bin());
 	}
 
 

@@ -377,7 +377,7 @@ private:
  */
 class ll_persistence_context {
 
-protected:
+public:
 
 	/**
 	 * The metadata for each level
