@@ -806,6 +806,7 @@ public:
 #if defined(__linux__)
 		int r = fallocate(file_for_index(fi), 0, offset, length);
 		if (r != 0) {
+			LL_E_PRINT("error when calling fallocate(%lu, %ld, %ld)\n", fi, offset, length);
 			perror("fallocate");
 			abort();
 		}

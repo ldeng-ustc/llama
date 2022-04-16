@@ -5,6 +5,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <utility>
 
 #include "llama/ll_mem_array.h"
 #include "llama/ll_writable_graph.h"
@@ -39,7 +41,7 @@ public:
 	 * @return true if it can be opened
 	 */
 	virtual bool accepts(const char* file) {
-        return strcmp(ll_file_extension(file), "bin") == 0;
+        return std::filesystem::is_directory(file);;
 	}
 
 
@@ -94,11 +96,26 @@ private:
 	 */
 	template<typename NodeType>
 	class bin_loader : public ll_edge_list_loader<NodeType, false>
-	{	
+	{
+		inline static const size_t BUFFER_SIZE = 1024 * 1024;
+		using DirIter = std::filesystem::directory_iterator;
 		size_t _nodes;
 		size_t _edges;
 
+		std::pair<NodeType, NodeType> *_buffer;
+		size_t _cur;
+		size_t _count;
+
+		DirIter _iter;
 		FILE *_file;
+		std::string _path;
+
+
+		bool next_file() {
+			if(_iter == _iter.end()) {
+				return false;
+			}
+		}
 
 	public:
 
@@ -108,8 +125,23 @@ private:
 		 * @param file_name the file name
 		 */
 		bin_loader(const char* file_name)
-			: ll_edge_list_loader<uint64_t, false>(), _nodes(0), _edges(0), _loaded_edges(0) {
-			_file = fopen(file_name, "rb");
+			: ll_edge_list_loader<uint64_t, false>(), _nodes(0), _edges(0) {
+
+			_iter = DirIter(file_name);
+			if(_iter != _iter.end()) {
+				_path = _iter->path();
+				_file = fopen(_path, "rb");
+			} else {
+				LL_E_PRINT("No file in directory '%s'", file_name);
+				abort();
+			}
+			if (!_file) {
+				LL_E_PRINT("Open file '%s' failed!\n", _path);
+				abort();
+			}
+			_buffer = new std::pair<NodeType, NodeType>[BUFFER_SIZE];
+			_cur = _count = 0;
+			
 		}
 
 
@@ -117,6 +149,7 @@ private:
 		 * Destroy the loader
 		 */
 		virtual ~bin_loader() {
+			delete _buffer;
 		}
 
 
@@ -132,8 +165,34 @@ private:
 		 */
 		virtual bool next_edge(NodeType* o_tail, NodeType* o_head,
 				float* o_weight) override {
-			NodeType nodes[2];
-			fread(nodes, sizeof(NodeType), 2, _file);
+			
+			if(_cur == _count) {
+				if(feof(_file)) {
+					if(_iter == _iter.end()) {
+						return false;
+					}
+					_file = 
+				}
+			}
+			
+			if (_cur < _count) {
+				*o_head = _buffer[_cur].first;
+				*o_tail = _buffer[_cur].second;
+				_cur ++;
+			} else {
+				size_t n = fread(_buffer, sizeof(_buffer[0]), BUFFER_SIZE, _file);
+				if(n < 2) {
+					if(n == 1) {
+						LL_E_PRINT("Format error in file '%s'\n", _path);
+						abort();
+					}
+
+				}
+			}
+			
+			if(n < 2) {
+				return false;
+			}
 			*o_tail = nodes[1];
 			*o_head = nodes[0];
 			_nodes = std::max(_nodes, nodes[0] + 1);
@@ -146,7 +205,7 @@ private:
 		/**
 		 * Rewind the input file
 		 */
-		virtual void rewind() {
+		virtual void rewind() override {
 			fseek(_file, 0, SEEK_SET);
 			_nodes = 0;
 			_edges = 0;
@@ -160,11 +219,15 @@ private:
 		 * @param o_edges the output for the number of edges
 		 * @return true if succeeded, or false if not or the info is not available
 		 */
-		bool stat(size_t* o_nodes, size_t* o_edges) {
-			*o_nodes = _nodes;
-			*o_edges = _edges;
-			return true;
+		virtual bool stat(size_t* o_nodes, size_t* o_edges) override {
+			// *o_nodes = _nodes;
+			// *o_edges = _edges;
+			// return true;
+			return false;
 		}
+
+	private:
+		
 	};
 };
 
