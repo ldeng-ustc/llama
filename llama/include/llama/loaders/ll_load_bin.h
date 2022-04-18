@@ -98,23 +98,51 @@ private:
 	class bin_loader : public ll_edge_list_loader<NodeType, false>
 	{
 		inline static const size_t BUFFER_SIZE = 1024 * 1024;
+		using EdgeType = std::pair<NodeType, NodeType>;
 		using DirIter = std::filesystem::directory_iterator;
-		size_t _nodes;
-		size_t _edges;
 
-		std::pair<NodeType, NodeType> *_buffer;
+		uint64_t _loaded_edges;
+
+		EdgeType *_buffer;
 		size_t _cur;
 		size_t _count;
 
+		const char* _dir;
 		DirIter _iter;
 		FILE *_file;
-		std::string _path;
 
+		bool open_file(const char* file) {
+			_file = fopen(file, "rb");
+			if(_file == NULL) {
+				LL_E_PRINT("Open file '%s' failed.\n", file);
+				abort();
+			}
+			return true;
+		}
 
 		bool next_file() {
-			if(_iter == _iter.end()) {
+			fclose(_file);
+			if(++_iter == std::filesystem::end(_iter)) {
 				return false;
 			}
+			return open_file(_iter->path().c_str());
+		}
+
+		bool read_buffer() {
+			do{
+				_count = fread(_buffer, sizeof(EdgeType), BUFFER_SIZE, _file);
+				if(ferror(_file)) {
+					LL_E_PRINT("Read file '%s' failed.\n", _iter->path().c_str());
+					LL_I_PRINT("Loaded edges: %lu \n", _loaded_edges);
+					abort();
+				}
+				if(feof(_file) && !next_file()) {
+					return false;
+				}
+				_count = fread(_buffer, sizeof(EdgeType), BUFFER_SIZE, _file);
+			} while (_count == 0);
+			_cur = 0;
+			return true;
 		}
 
 	public:
@@ -125,23 +153,9 @@ private:
 		 * @param file_name the file name
 		 */
 		bin_loader(const char* file_name)
-			: ll_edge_list_loader<uint64_t, false>(), _nodes(0), _edges(0) {
-
-			_iter = DirIter(file_name);
-			if(_iter != _iter.end()) {
-				_path = _iter->path();
-				_file = fopen(_path, "rb");
-			} else {
-				LL_E_PRINT("No file in directory '%s'", file_name);
-				abort();
-			}
-			if (!_file) {
-				LL_E_PRINT("Open file '%s' failed!\n", _path);
-				abort();
-			}
-			_buffer = new std::pair<NodeType, NodeType>[BUFFER_SIZE];
-			_cur = _count = 0;
-			
+			: ll_edge_list_loader<uint64_t, false>(), _dir(file_name), _file(NULL) {
+			_buffer = new EdgeType[BUFFER_SIZE];
+			rewind();
 		}
 
 
@@ -165,50 +179,33 @@ private:
 		 */
 		virtual bool next_edge(NodeType* o_tail, NodeType* o_head,
 				float* o_weight) override {
-			
-			if(_cur == _count) {
-				if(feof(_file)) {
-					if(_iter == _iter.end()) {
-						return false;
-					}
-					_file = 
-				}
-			}
-			
-			if (_cur < _count) {
-				*o_head = _buffer[_cur].first;
-				*o_tail = _buffer[_cur].second;
-				_cur ++;
-			} else {
-				size_t n = fread(_buffer, sizeof(_buffer[0]), BUFFER_SIZE, _file);
-				if(n < 2) {
-					if(n == 1) {
-						LL_E_PRINT("Format error in file '%s'\n", _path);
-						abort();
-					}
-
-				}
-			}
-			
-			if(n < 2) {
+			// read new data if all data in _buffer has been read. 
+			if(_cur == _count && !read_buffer()) {
 				return false;
 			}
-			*o_tail = nodes[1];
-			*o_head = nodes[0];
-			_nodes = std::max(_nodes, nodes[0] + 1);
-			_nodes = std::max(_nodes, nodes[1] + 1);
-			_edges ++;
+			*o_head = _buffer[_cur].first;
+			*o_tail = _buffer[_cur].second;
+			_cur++;
+			_loaded_edges ++;
 			return true;
 		}
-
 
 		/**
 		 * Rewind the input file
 		 */
 		virtual void rewind() override {
-			fseek(_file, 0, SEEK_SET);
-			_nodes = 0;
-			_edges = 0;
+			if(_file != NULL) {
+				fclose(_file);
+			}
+			_iter = DirIter(_dir);
+			if(_iter != std::filesystem::end(_iter)) {
+				open_file(_iter->path().c_str());
+			} else {
+				LL_E_PRINT("No file in directory '%s'", _dir);
+				abort();
+			}
+			_cur = _count = 0;
+			_loaded_edges = 0;
 		}
 
 
