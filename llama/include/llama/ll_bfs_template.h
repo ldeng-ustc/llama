@@ -168,6 +168,7 @@ class ll_bfs_template
 
         bool is_done = false;
         while (!is_done) {
+            printf("BFS curr_level: %d, curr_count: %ld, curr_state: %d\n", curr_level, curr_count, state);
             switch (state) {
                 case ST_SMALL: {
                     for (node_t i = 0; i < curr_count; i++) {

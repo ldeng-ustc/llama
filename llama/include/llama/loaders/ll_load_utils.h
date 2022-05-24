@@ -335,6 +335,8 @@ public:
 		features << LL_L_FEATURE(lc_reverse_edges);
 		features << LL_L_FEATURE(lc_deduplicate);
 		features << LL_L_FEATURE(lc_no_properties);
+		features << LL_L_FEATURE(lc_partial_load_part);
+		features << LL_L_FEATURE(lc_partial_load_num_parts);
 
 		config->assert_features(false /*direct*/, true /*error*/, features);
 
@@ -1388,6 +1390,8 @@ private:
 		features << LL_L_FEATURE(lc_deduplicate);
 		features << LL_L_FEATURE(lc_no_properties);
 		features << LL_L_FEATURE(lc_max_edges);
+		features << LL_L_FEATURE(lc_partial_load_part);
+		features << LL_L_FEATURE(lc_partial_load_num_parts);
 
 		config->assert_features(false /*direct*/, true /*error*/, features);
 

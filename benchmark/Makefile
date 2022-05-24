@@ -8,7 +8,7 @@
 #
 
 CC         := g++
-CFLAGS     := -Wall -Wno-class-memaccess -Wno-register -fopenmp -std=c++17 -I. -I../llama/include
+CFLAGS     := -Wall -Wno-class-memaccess -Wno-register -Wno-array-bounds -Wno-maybe-uninitialized -fopenmp -std=gnu++17 -I. -I../llama/include
 LFLAGS     := 
 
 

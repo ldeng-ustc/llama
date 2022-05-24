@@ -101,7 +101,7 @@ public:
 	/// The max number of edges to load
 	size_t lc_max_edges;
 
-	/// The partial load - part number (1-based, not 0-based)
+	/// The partial load - part number (1-based, not 0-based, 0 to load all parts, one part per level)
 	size_t lc_partial_load_part;
 
 	/// The partial load - the total number of parts

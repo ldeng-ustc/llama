@@ -1912,6 +1912,11 @@ int main(int argc, char** argv)
 
 	bool ll = true; (void) ll;
 	loader_config.lc_reverse_edges = needs_reverse_edges;
+
+	bool load_all_parts = loader_config.lc_partial_load_num_parts > 0
+							&& loader_config.lc_partial_load_part == 0;
+	int num_parts = load_all_parts ? loader_config.lc_partial_load_num_parts : 1;
+
 #ifdef BENCHMARK_WRITABLE
 	ll = false;
 	loader_config.lc_reverse_maps = needs_reverse_edges;
@@ -1941,39 +1946,44 @@ int main(int argc, char** argv)
 
 		if (verbose) fprintf(stderr, "\nLoading:\n");
 		for (int i = 0; i <= max_level; i++) {
-			if (verbose) fprintf(stderr, " %2d: %s", i, input_files[i].c_str());
-			double ts = ll_get_time_ms();
+			for(int j = 0; j < num_parts; j++) {
+				if(load_all_parts) {
+					loader_config.lc_partial_load_part = j + 1;
+				}
+				if (verbose) fprintf(stderr, " %2d: %s", i, input_files[i].c_str());
+				double ts = ll_get_time_ms();
 #ifdef DO_CP
-			bool loadRO = false;
+				bool loadRO = false;
 #else
-			bool loadRO = i == max_level ? ll : true;
+				bool loadRO = i == max_level ? ll : true;
 #endif
 
-			if (loadRO)
-				loader->load_direct(&graph, input_files[i].c_str(), &loader_config);
-			else
-				loader->load_incremental(&graph, input_files[i].c_str(), &loader_config);
+				if (loadRO)
+					loader->load_direct(&graph, input_files[i].c_str(), &loader_config);
+				else
+					loader->load_incremental(&graph, input_files[i].c_str(), &loader_config);
 
-			double t_l = ll_get_time_ms() - ts;
-			double tt = t_l;
-			if (verbose) fprintf(stderr, " (Load: %3.2lf s", t_l/1000.0);
+				double t_l = ll_get_time_ms() - ts;
+				double tt = t_l;
+				if (verbose) fprintf(stderr, " (Load: %3.2lf s", t_l/1000.0);
 
 #ifdef DO_CP
-			ts = ll_get_time_ms();
+				ts = ll_get_time_ms();
 #	ifdef BENCHMARK_WRITABLE
-			if (i < max_level) graph.checkpoint(&loader_config);
+				if (i < max_level) graph.checkpoint(&loader_config);
 #	else
-			graph.checkpoint(&loader_config);
+				graph.checkpoint(&loader_config);
 #	endif
-			double t_c = ll_get_time_ms() - ts;
-			tt += t_c;
-			if (verbose) {
-				fprintf(stderr, ", CP: %3.2lf s", t_c/1000.0);
-			}
+				double t_c = ll_get_time_ms() - ts;
+				tt += t_c;
+				if (verbose) {
+					fprintf(stderr, ", CP: %3.2lf s", t_c/1000.0);
+				}
 #endif
-			if (verbose) {
-				fprintf(stderr, ", %7.2lf Kedges/s)\n",
-						graph.max_edges(graph.num_levels() - 2) / tt);
+				if (verbose) {
+					fprintf(stderr, ", %7.2lf Kedges/s)\n",
+							graph.max_edges(graph.num_levels() - 2) / tt);
+				}
 			}
 		}
 		//if (verbose) fprintf(stderr, "\n");
