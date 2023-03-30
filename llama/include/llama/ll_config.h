@@ -107,6 +107,9 @@ public:
 	/// The partial load - the total number of parts
 	size_t lc_partial_load_num_parts;
 
+	/// The batch load - the number of edges per batch
+	size_t lc_batch_edges;
+
 
 public:
 

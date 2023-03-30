@@ -1066,8 +1066,8 @@ static ll_runnable_thing g_runnable_things[] = {
 // The Command-Line Arguments                                               //
 //==========================================================================//
 
-static const char* SHORT_OPTIONS = "c:C:d:DIhl:Ln:No:Op:P:r:R:t:ST:UvX:"
-	IF_LL_STREAMING("B:M:W:")
+static const char* SHORT_OPTIONS = "B:c:C:d:DIhl:Ln:No:Op:P:r:R:t:ST:UvX:"
+	IF_LL_STREAMING("M:W:")
 #ifdef BENCHMARK_CONTINUOUS_LOAD
 	"E:F:"
 #endif
@@ -1078,9 +1078,7 @@ static const char* SHORT_OPTIONS = "c:C:d:DIhl:Ln:No:Op:P:r:R:t:ST:UvX:"
 
 static struct option LONG_OPTIONS[] =
 {
-#ifdef LL_STREAMING
 	{"batch"        , required_argument, 0, 'B'},
-#endif
 	{"count"        , required_argument, 0, 'c'},
 	{"compare"      , required_argument, 0, 'C'},
 	{"database"     , required_argument, 0, 'd'},
@@ -1134,9 +1132,7 @@ static void usage(const char* arg0) {
 	free(s);
 	
 	fprintf(stderr, "Options:\n");
-#ifdef LL_STREAMING
-	fprintf(stderr, "  -B, --batch N         Set the batch size for advancing the stream\n");
-#endif
+	fprintf(stderr, "  -B, --batch N         Set the batch size for load (one level per batch) or advancing the stream\n");
 	fprintf(stderr, "  -c, --count N         Run the given benchmark operation N times\n");
 	fprintf(stderr, "  -C, --compare FILE    Compare graph to the one in the given file\n");
 	fprintf(stderr, "  -d, --database DIR    Set the database directory\n");
@@ -1489,6 +1485,7 @@ int main(int argc, char** argv)
 					fprintf(stderr, "Error: The batch size must be positive\n");
 					return 1;
 				}
+				loader_config.lc_batch_edges = atoi(optarg);
 				break;
 
 			case 'c':

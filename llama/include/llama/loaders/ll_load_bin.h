@@ -90,12 +90,19 @@ public:
 	virtual void load_direct(ll_mlcsr_ro_graph* graph, const char* file,
 			const ll_loader_config* config) {
 		auto [needed_edge, begin_edge] = init(file, config);
+		uint64_t batch_edge = config->lc_batch_edges > 0 ? config->lc_batch_edges : needed_edge;
 		printf("Load direct: neeeded: %lu, begin: %lu\n", needed_edge, begin_edge);
-		bin_loader loader(_reader.get(), needed_edge, begin_edge);
-		bool r = loader.load_direct(graph, config);
-		if (!r) {
-			LL_E_PRINT("Load direct failed!\n");
-			abort();
+
+		auto end_edge = begin_edge + needed_edge;
+		while (begin_edge < end_edge) {
+			auto level_edges = std::min(batch_edge, end_edge - begin_edge);
+			bin_loader loader(_reader.get(), level_edges, begin_edge);
+			bool r = loader.load_direct(graph, config);
+			if (!r) {
+				LL_E_PRINT("Load direct failed!\n");
+				abort();
+			}
+			begin_edge += level_edges;
 		}
 	}
 
@@ -110,11 +117,19 @@ public:
 	virtual void load_incremental(ll_writable_graph* graph, const char* file,
 			const ll_loader_config* config) {
 		auto [needed_edge, begin_edge] = init(file, config);
-		bin_loader loader(_reader.get(), needed_edge, begin_edge);
-		bool r = loader.load_incremental(graph, config);
-		if (!r) {
-			LL_E_PRINT("Load direct failed!\n");
-			abort();
+		uint64_t batch_edge = config->lc_batch_edges > 0 ? config->lc_batch_edges : needed_edge;
+		printf("Load incremental: neeeded: %lu, begin: %lu\n", needed_edge, begin_edge);
+
+		auto end_edge = begin_edge + needed_edge;
+		while (begin_edge < end_edge) {
+			auto level_edges = std::min(batch_edge, end_edge - begin_edge);
+			bin_loader loader(_reader.get(), level_edges, begin_edge);
+			bool r = loader.load_incremental(graph, config);
+			if (!r) {
+				LL_E_PRINT("Load incremental failed!\n");
+				abort();
+			}
+			begin_edge += level_edges;
 		}
 	}
 
@@ -229,8 +244,8 @@ private:
 					return false;
 				}
 			}
-			*tail = _buffer[_cur].second;
-			*head = _buffer[_cur].first;
+			*tail = _buffer[_cur].first;
+			*head = _buffer[_cur].second;
 			_cur++;
 			return true;
 		}
@@ -293,7 +308,9 @@ private:
 			}
 			bool ok = _reader->next(o_tail, o_head);
 			_loaded_edges += ok;
-			// printf("loaded %5ld edges: %15lu %15lu  ok: %d\n", _loaded_edges, *o_head, *o_tail, ok);
+			// if(*o_tail == 0 || *o_head == 0) {
+			// 	printf("loaded %5ld edges: %15lu %15lu  ok: %d\n", _loaded_edges, *o_head, *o_tail, ok);
+			// }
 			return ok;
 		}
 

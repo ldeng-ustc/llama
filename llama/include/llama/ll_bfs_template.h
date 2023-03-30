@@ -125,6 +125,8 @@ class ll_bfs_template
         }
 		max_threads = num_thread;
 
+        LL_I_PRINT("Init BFS: root: %ld, num_thread: %d\n", root_node, num_thread);
+
         is_finished = false;
         curr_level = 0;
         root = root_node;
@@ -169,6 +171,7 @@ class ll_bfs_template
         bool is_done = false;
         while (!is_done) {
             printf("BFS curr_level: %d, curr_count: %ld, curr_state: %d\n", curr_level, curr_count, state);
+            auto t_st = ll_get_time_ms();
             switch (state) {
                 case ST_SMALL: {
                     for (node_t i = 0; i < curr_count; i++) {
@@ -286,7 +289,8 @@ class ll_bfs_template
                     break;
                 }
             } // end of switch
-
+            auto t_ed = ll_get_time_ms();
+            printf("Time: %fs\n", (t_ed - t_st) / 1000.0);
             do_end_of_level_fw();
             is_done = get_next_state();
 
@@ -470,7 +474,6 @@ class ll_bfs_template
 		ll_edge_iterator iter; iter_begin(iter, t);
 		for (edge_t nx = iter_next(iter); nx != LL_NIL_EDGE; nx = iter_next(iter)) {
             node_t u = get_node(iter);
-
             // check visited
             if (small_visited.find(u) == small_visited.end()) {
                 if (has_navigator) {
@@ -480,7 +483,7 @@ class ll_bfs_template
                 if (save_child) {
                     save_down_edge_small(nx);
                 }
-
+                // printf("visit %ld\n", u);
                 small_visited[u] = curr_level + 1;
                 //global_next_level[next_count++] = u;
                 global_vector.push_back(u); 
@@ -490,7 +493,6 @@ class ll_bfs_template
                 if (has_navigator) {
                     if (check_navigator(u, nx) == false) continue;
                 }
-
                 if (small_visited[u] == (curr_level+1)){
                     save_down_edge_small(nx);
                 }
